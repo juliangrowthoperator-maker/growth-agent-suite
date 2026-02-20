@@ -63,9 +63,9 @@ export default async function KnowledgeBasePage({ params }: { params: { id: stri
                                 await prisma.knowledgeDocument.create({
                                     data: {
                                         clientId: params.id,
-                                        title,
+                                        fileName: title,
                                         content,
-                                        type: 'TEXT',
+                                        docType: 'TEXT',
                                     }
                                 });
                                 redirect(`/dashboard/clients/${params.id}/knowledge`);
@@ -136,9 +136,9 @@ export default async function KnowledgeBasePage({ params }: { params: { id: stri
                                                 <FileText className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p className="font-semibold text-sm text-white group-hover:text-pine-400 transition-colors line-clamp-1">{doc.title}</p>
+                                                <p className="font-semibold text-sm text-white group-hover:text-pine-400 transition-colors line-clamp-1">{doc.fileName}</p>
                                                 <p className="text-xs text-gray-500 mt-1 flex justify-between items-center pr-2">
-                                                    <span>{doc.type}</span>
+                                                    <span>{doc.docType}</span>
                                                     <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
                                                 </p>
                                             </div>

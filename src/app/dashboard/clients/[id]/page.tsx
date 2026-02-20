@@ -56,7 +56,7 @@ export default async function ClientConfigPage({ params }: { params: { id: strin
                                 <label className="block text-sm font-medium text-gray-300 mb-2">Nombre del Agente (Bot Persona)</label>
                                 <input
                                     type="text"
-                                    defaultValue={client.botName || ""}
+                                    defaultValue={client.personaName || ""}
                                     className="w-full px-4 py-3 bg-cinematic-deep border border-white/10 rounded-xl focus:ring-2 focus:ring-pine-500/50 transition-all text-sm text-white"
                                     placeholder="Ej. Alex de Acme Corp"
                                 />
@@ -75,7 +75,7 @@ export default async function ClientConfigPage({ params }: { params: { id: strin
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2">Tono de Voz</label>
                                 <textarea
-                                    defaultValue={client.toneOfVoice || ""}
+                                    defaultValue={client.tone || ""}
                                     rows={4}
                                     className="w-full px-4 py-3 bg-cinematic-deep border border-white/10 rounded-xl focus:ring-2 focus:ring-pine-500/50 transition-all text-sm text-white"
                                     placeholder="Breve, directo al grano, usando jerga de desarrollo de software..."
