@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* Pine Green / Cinematic Colors */
+  --color-pine-50: #ecfdf5;
+  --color-pine-100: #d1fae5;
+  --color-pine-200: #a7f3d0;
+  --color-pine-300: #6ee7b7;
+  --color-pine-400: #34d399;
+  --color-pine-500: #10b981;
+  --color-pine-600: #059669;
+  --color-pine-700: #047857;
+  --color-pine-800: #065f46;
+  --color-pine-900: #064e3b;
+  --color-pine-950: #022c22;
+
+  --color-cinematic-deep: #010f14;
+  --color-cinematic-surface: #03171f;
+  --color-cinematic-primary: #065f46;
+  --color-cinematic-light: #34d399;
+  --color-cinematic-accent: #d4af37;
+  --color-cinematic-blue: #0e7490;
+
+  /* Custom Gradients & Shadows */
+  --background-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+  --background-glass-strong: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+  --background-radial-glow: radial-gradient(circle at 50% 0%, rgba(6, 95, 70, 0.15) 0%, transparent 70%);
+  --background-hero-gradient: linear-gradient(to bottom, rgba(1, 15, 20, 0.3) 0%, #010f14 100%);
+
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  --shadow-glass-sm: 0 4px 16px 0 rgba(0, 0, 0, 0.2);
+  --shadow-glow: 0 0 30px rgba(52, 211, 153, 0.15);
+}
+
+:root {
+  /* Set deep dark blue/green background */
+  --background: #010f14;
+  --foreground: #e2e8f0;
+
+  /* Form/Cards base override if needed */
+  --border: rgba(255, 255, 255, 0.05);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Base custom utility classes */
+@layer utilities {
+  .glass-card {
+    background: var(--background-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: var(--shadow-glass);
+  }
+
+  .glass-card-strong {
+    background: var(--background-glass-strong);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: var(--shadow-glass);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(52, 211, 153, 0.4);
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(to right, #d4af37, #fde047);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+}
+
+::selection {
+  background: rgba(52, 211, 153, 0.2);
+}

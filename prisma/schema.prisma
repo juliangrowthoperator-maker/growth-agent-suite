@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------
+// 1. AUTH & MULTI-TENANCY
+// ----------------------------------------------------------------------
+
+enum Channel {
+  INSTAGRAM
+  WHATSAPP
+}
+
+// Growth Operator / Agency Owner
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  clients       Client[]  // A user can manage multiple Brands/Clients
+}
+
+// For NextAuth OAuth (if needed later)
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// ----------------------------------------------------------------------
+// 2. CLIENT / BRAND (Multi-tenant isolation)
+// ----------------------------------------------------------------------
+
+model Client {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  niche         String?
+  language      String   @default("es") // "es" or "en"
+  channels      String   @default("instagram") // "instagram", "whatsapp", "both"
+  logo          String?
+  colorScheme   String?  @default("pine-green")
+
+  // Agent configuration
+  personaName   String?  @default("Equipo de Crecimiento")
+  treatment     String?  @default("tu") // "tu" or "usted"
+  tone          String?  @default("amigable")
+  salesIntensity String? @default("media")
+  messageStyle  String?  @default("conciso")
+  simulateDelay Boolean  @default(true)
+  humanIntervention Boolean @default(false)
+
+  // Scheduling integration
+  calendarUrl   String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  webhookSubscriptions WebhookSubscription[]
+  documents     KnowledgeDocument[]
+  leads         Lead[]
+  conversations Conversation[]
+  messages      Message[]
+  calls         Call[]
+  igConnections InstagramConnection[]
+  waConnections WhatsAppConnection[]
+}
+
+// ----------------------------------------------------------------------
+// 3. KNOWLEDGE BASE (RAG)
+// ----------------------------------------------------------------------
+
+model KnowledgeDocument {
+  id         String   @id @default(uuid())
+  clientId   String
+  fileName   String
+  docType    String   // "pdf", "docx", "txt", "url", "text"
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------------------------------------------------------
+// 4. CHANNELS & INTEGRATIONS
+// ----------------------------------------------------------------------
+
+model InstagramConnection {
+  id               String   @id @default(uuid())
+  clientId         String
+  igBusinessAccountId String
+  accessToken      String   @db.Text
+  status           String   @default("active") // "active", "expired", "revoked"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model WhatsAppConnection {
+  id               String   @id @default(uuid())
+  clientId         String
+  phoneNumberId    String
+  accessToken      String   @db.Text
+  status           String   @default("active")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------------------------------------------------------
+// 5. CRM & MESSAGING
+// ----------------------------------------------------------------------
+
+model Lead {
+  id               String   @id @default(uuid())
+  clientId         String
+  channel          Channel  @default(INSTAGRAM)
+  origin           String   @default("new_follower")
+  
+  // IG Specific
+  username         String?
+  igUserId         String?
+  name             String?
+  bioText          String?  @db.Text
+  followersCount   Int      @default(0)
+  followingCount   Int      @default(0)
+  mediaCount       Int      @default(0)
+  
+  // WhatsApp Specific
+  phoneE164        String?
+  waUserId         String?
+  
+  // Scoring
+  engagementScore  Float    @default(0)
+  segmentSize      String?  // "micro", "mid", "macro", "mega"
+  
+  pipelineState    String   @default("descubierto") // "descubierto", "contactado", "interesado", "llamada_agendada", "cliente", "descartado"
+  detectedLang     String?
+  notes            String?  @db.Text
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  client           Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  conversations    Conversation[]
+  messages         Message[]
+  calls            Call[]
+
+  @@index([clientId, igUserId])
+  @@index([clientId, phoneE164])
+}
+
+model Conversation {
+  id             String   @id @default(uuid())
+  clientId       String
+  leadId         String
+  channel        Channel  @default(INSTAGRAM)
+  externalThreadId String?
+  lastMessage    String?  @db.Text
+  lastSenderType String?  // "lead", "agent", "human"
+  status         String   @default("activa") // "activa", "en_espera", "cerrada"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messages       Message[]
+
+  @@index([clientId, channel, externalThreadId])
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  leadId         String
+  clientId       String
+  channel        Channel  @default(INSTAGRAM)
+  externalMessageId String?
+  direction      String   @default("in") // "in" | "out"
+  senderType     String   // "lead", "agent", "human"
+  textContent    String   @db.Text
+  metadata       String?  @db.Text // JSON stringifiable
+  timestamp      DateTime @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client         Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, channel, externalMessageId])
+}
+
+model WebhookSubscription {
+  id        String   @id @default(uuid())
+  clientId  String
+  url       String   @db.Text
+  secret    String   @db.Text
+  events    String   @db.Text // JSON string (lista de eventos)
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Call {
+  id             String   @id @default(uuid())
+  clientId       String
+  leadId         String
+  title          String
+  scheduledAt    DateTime
+  timezone       String   @default("UTC")
+  channel        String   @default("Zoom") // Zoom, Meet, etc
+  status         String   @default("programada") // "programada", "completada", "cancelada", "no_show"
+  calendarLink   String?  @db.Text
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
