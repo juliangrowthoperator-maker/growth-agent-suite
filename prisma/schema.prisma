@@ -209,6 +209,8 @@ model Message {
   direction      String   @default("in") // "in" | "out"
   senderType     String   // "lead", "agent", "human"
   textContent    String   @db.Text
+  status         String   @default("received") // "received", "sent", "delivered", "read", "failed"
+  messageType    String   @default("text") // "text", "image", "audio", "video", "sticker", "system"
   metadata       String?  @db.Text // JSON stringifiable
   timestamp      DateTime @default(now())
 

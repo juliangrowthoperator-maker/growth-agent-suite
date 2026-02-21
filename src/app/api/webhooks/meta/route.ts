@@ -77,20 +77,46 @@ export async function POST(req: Request) {
                     if (clientId && entry.changes) {
                         for (const change of entry.changes) {
                             const value = change.value;
+
+                            // Handling Messages (Text, Images, Audio, Stickers, etc)
                             if (value.messages && value.messages.length > 0) {
                                 for (const message of value.messages) {
                                     const waUserId = value.contacts?.[0]?.wa_id || message.from;
                                     const phoneE164 = message.from;
                                     const userName = value.contacts?.[0]?.profile?.name || "";
                                     const externalMessageId = message.id;
-                                    const textContent = message.text?.body || "[non-text message]";
+
+                                    let messageType = message.type || "text";
+                                    let textContent = "[non-text message]";
+
+                                    if (messageType === "text") textContent = message.text?.body || "";
+                                    else if (messageType === "sticker") textContent = "[Sticker]";
+                                    else if (messageType === "image") textContent = "[Image]";
+                                    else if (messageType === "audio") textContent = "[Audio]";
+                                    else if (messageType === "video") textContent = "[Video]";
+                                    else if (messageType === "document") textContent = "[Document]";
+                                    else if (messageType === "button") textContent = message.button?.text || "[Button]";
+                                    else if (messageType === "interactive") textContent = message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || "[Interactive]";
 
                                     await upsertPipeline(clientId, channel, {
                                         waUserId,
                                         phoneE164,
                                         username: userName,
                                         igUserId: null
-                                    }, externalMessageId, textContent, value);
+                                    }, externalMessageId, textContent, messageType, "received", value);
+                                }
+                            }
+
+                            // Handling Statuses (Sent, Delivered, Read, Failed)
+                            if (value.statuses && value.statuses.length > 0) {
+                                for (const statusObj of value.statuses) {
+                                    const externalMessageId = statusObj.id;
+                                    const statusEnum = statusObj.status;
+
+                                    await prisma.message.updateMany({
+                                        where: { externalMessageId, clientId, channel },
+                                        data: { status: statusEnum }
+                                    });
                                 }
                             }
                         }
@@ -113,17 +139,57 @@ export async function POST(req: Request) {
 
                     if (clientId && entry.messaging) {
                         for (const event of entry.messaging) {
+
+                            // Handling Messages
                             if (event.message) {
                                 const igUserId = event.sender.id;
                                 const externalMessageId = event.message.mid;
-                                const textContent = event.message.text || "[non-text message]";
+
+                                let messageType = "text";
+                                let textContent = "[non-text message]";
+
+                                if (event.message.text) {
+                                    textContent = event.message.text;
+                                } else if (event.message.attachments && event.message.attachments.length > 0) {
+                                    const attachmentType = event.message.attachments[0].type;
+                                    messageType = attachmentType;
+                                    if (attachmentType === "image") textContent = "[Image]";
+                                    else if (attachmentType === "video") textContent = "[Video]";
+                                    else if (attachmentType === "audio") textContent = "[Audio]";
+                                    else if (attachmentType === "file") textContent = "[File]";
+                                    else if (attachmentType === "fallback" || attachmentType === "sticker" || attachmentType === "story_mention") {
+                                        messageType = "sticker";
+                                        textContent = "[Sticker / Story Interaction]";
+                                    }
+                                } else if (event.message.is_deleted) {
+                                    messageType = "system";
+                                    textContent = "[Message deleted by user]";
+                                }
 
                                 await upsertPipeline(clientId, channel, {
                                     waUserId: null,
                                     phoneE164: null,
                                     username: null,
                                     igUserId: igUserId
-                                }, externalMessageId, textContent, event);
+                                }, externalMessageId, textContent, messageType, "received", event);
+                            }
+
+                            // Handling Deliveries
+                            if (event.delivery && event.delivery.mids) {
+                                for (const mid of event.delivery.mids) {
+                                    await prisma.message.updateMany({
+                                        where: { externalMessageId: mid, clientId, channel },
+                                        data: { status: "delivered" }
+                                    });
+                                }
+                            }
+
+                            // Handling Read Receipts (IG primarily uses watermarks, but if mids are passed)
+                            if (event.read && event.read.mid) {
+                                await prisma.message.updateMany({
+                                    where: { externalMessageId: event.read.mid, clientId, channel },
+                                    data: { status: "read" }
+                                });
                             }
                         }
                     }
@@ -152,6 +218,8 @@ async function upsertPipeline(
     leadData: { waUserId: string | null, phoneE164: string | null, username: string | null, igUserId: string | null },
     externalMessageId: string,
     textContent: string,
+    messageType: string,
+    status: string,
     rawEvent: any
 ) {
 
@@ -234,6 +302,8 @@ async function upsertPipeline(
                     direction: "in",
                     senderType: "lead",
                     textContent,
+                    messageType,
+                    status,
                     metadata: JSON.stringify(rawEvent)
                 }
             });
@@ -249,14 +319,10 @@ async function upsertPipeline(
                 direction: "in",
                 senderType: "lead",
                 textContent,
+                messageType,
+                status,
                 metadata: JSON.stringify(rawEvent)
             }
         });
     }
-
-    // TODOs:
-    // - estados delivery/read
-    // - attachments (images, audio)
-    // - outbound messages (echoes from other agents)
-    // - dedupe avanzado
 }
