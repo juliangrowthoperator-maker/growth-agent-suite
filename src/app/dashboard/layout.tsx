@@ -19,6 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
         { name: "Clientes & Agentes", href: "/dashboard/clients", icon: Users },
         { name: "Pipeline", href: "/dashboard/pipeline", icon: KanbanSquare },
+        { name: "Integraciones", href: "/dashboard/integrations", icon: Bot },
         { name: "Inbox DM", href: "/dashboard/inbox", icon: MessageSquare },
     ];
 
@@ -45,8 +46,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                     key={item.name}
                                     href={item.href}
                                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${isActive
-                                            ? "bg-pine-500/10 text-pine-400 border border-pine-500/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-                                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                                        ? "bg-pine-500/10 text-pine-400 border border-pine-500/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+                                        : "text-gray-400 hover:text-white hover:bg-white/5"
                                         }`}
                                 >
                                     <item.icon className={`w-4 h-4 ${isActive ? "text-pine-400" : "text-gray-500"}`} />
